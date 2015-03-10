@@ -9,7 +9,6 @@ from openerp import tools
 from openerp.osv import fields, osv
 from openerp.tools.translate import _
 
-
 import re
 from dateutil.relativedelta import relativedelta
 
@@ -28,7 +27,7 @@ BACKLOG_STATES = [('draft','Draft'),
 class projectScrumSprint(osv.osv):
     _name = 'project.scrum.sprint'
     _description = 'Project Scrum Sprint'
-    
+
     def _compute(self, cr, uid, ids, fields, arg, context=None):
         res = {}.fromkeys(ids, 0.0)
         progress = {}
@@ -61,22 +60,22 @@ class projectScrumSprint(osv.osv):
     def button_draft(self, cr, uid, ids, context=None):
         self.write(cr, uid, ids, {'state':'draft'}, context=context)
         return True
-    
-    
+
+
     def _verify_if_user_stories_in(self, cr, uid, ids, context=None):
         story_ids = self.pool.get('project.scrum.product.backlog').search(cr, uid, [('sprint_id', 'in', ids)])
         print "story_ids = ", story_ids
         if story_ids == []: return False
         else: return True
-    
+
     def button_open(self, cr, uid, ids, context=None):
         if not context:
             context = {}
-        
+
         for (id, name) in self.name_get(cr, uid, ids):
             res = self._verify_if_user_stories_in(cr, uid, [id])
             one_sprint_open = self._check_only_one_open(cr, uid, [id])
-            
+
             if not one_sprint_open:
                 raise osv.except_osv(_('Warning !'), _("You can not open sprint if one is already open for the same project and the same release"))
             if not res:
@@ -87,7 +86,7 @@ class projectScrumSprint(osv.osv):
                 #FIX log() is deprecated, user OpenChatter instead
                 self.log(cr, uid, id, message)
         return True
-    
+
     def _get_velocity_sprint_done(self, cr, uid, ids, context=None):
         if not context:
             context = {}
@@ -101,7 +100,7 @@ class projectScrumSprint(osv.osv):
             res['effective_velocity_sprint_done'] = velocity
             self.write(cr, uid, ids, res, context=context)
         return True
-    
+
     def button_close(self, cr, uid, ids, context=None):
         effective_velocity = 0
         if context is None:
@@ -130,44 +129,44 @@ class projectScrumSprint(osv.osv):
                 velocity += story_pool.read(cr, uid, story_id, ['complexity'])['complexity']
             res[sprint.id] = velocity
         return res
-    
+
     _columns = {
         'name': fields.char('Sprint Name', required=True, size=64),
         'date_start': fields.date('Starting Date', required=True),
         'date_stop': fields.date('Ending Date', required=True),
         'release_id': fields.many2one('project.scrum.release', 'Release', required=True),
         'project_id': fields.related('release_id', 'project_id', type='many2one', relation='project.project', string="Project", readonly=True),
-        
+
         #FIX product_owner_id and scrum_master_id are defined in project.project (delete from here)
         'product_owner_id': fields.many2one('res.users', 'Product Owner', required=True, help="The person who is responsible for the product"),
         'scrum_master_id': fields.many2one('res.users', 'Scrum Master', required=True, help="The person who is maintains the processes for the product"),
-        
+
         'meeting_ids': fields.one2many('project.scrum.meeting', 'sprint_id', 'Daily Scrum'),
         'review': fields.text('Sprint Review'),
-        
+
         'retrospective_start_to_do': fields.text('Start to do'),
         'retrospective_continue_to_do': fields.text('Continue to do'),
         'retrospective_stop_to_do': fields.text('Stop to do'),
-        
+
         'backlog_ids': fields.one2many('project.scrum.product.backlog', 'sprint_id', 'Sprint Backlog'),
         'progress': fields.function(_compute, group_operator="avg", type='float', multi="progress", method=True, string='Progress (0-100)', help="Computed as: Time Spent / Total Time."),
         'effective_hours': fields.function(_compute, multi="effective_hours", method=True, string='Effective hours', help="Computed using the sum of the task work done."),
         'expected_hours': fields.function(_compute, multi="expected_hours", method=True, string='Planned Hours', help='Estimated time to do the task.'),
         'state': fields.selection(SPRINT_STATES, 'State', required=True),
         'goal': fields.char("Goal", size=128),
-        
+
         'planned_velocity': fields.integer("Planned velocity", help="Estimated velocity for sprint, usually set by the development team during sprint planning."),
         'effective_velocity': fields.function(_get_velocity, string="Effective velocity", type='integer', help="Computed using the sum of the task work done."),
         'effective_velocity_sprint_done': fields.integer("Effective velocity"),
     }
-    
-    
+
+
     _defaults = {
         'state': 'draft',
         'date_start' : lambda *a: time.strftime('%Y-%m-%d'),
     }
     _order = 'date_start desc'
-    
+
     def _check_dates(self, cr, uid, ids, context=None):
         for leave in self.read(cr, uid, ids, ['date_start', 'date_stop'], context=context):
             if leave['date_start'] and leave['date_stop']:
@@ -176,11 +175,15 @@ class projectScrumSprint(osv.osv):
         return True
 
     def _check_only_one_open(self, cr, uid, ids, context=None):
-        # Only one sprint can be open byt project_id/release_id
+        # Only one sprint can be open by project_id/release_id
         for sprint in self.browse(cr, uid, ids, context=context):
-            opened_sprint_ids = self.search(cr, uid, [('project_id', '=', sprint.project_id.id),('state','=','open'),('release_id','=', sprint.release_id.id)])
-	    if len(opened_sprint_ids) > 0:
-                return False 
+            open_sprint_ids = self.search(
+                cr, uid, [('project_id', '=', sprint.project_id.id),
+                          ('release_id','=', sprint.release_id.id),
+                          ('state','=','open'),])
+            open_sprints = self.browse(cr, uid, open_sprint_ids, context)
+            if len(open_sprint_ids) > 1:
+                return False
         return True
 
     _constraints = [
@@ -265,19 +268,19 @@ class projectScrumPBStage(osv.osv):
         'name': fields.char('Stage Name', translate=True, required=True),
         'sequence': fields.integer('Sequence', help="Used to order the story stages"),
         'user_id': fields.many2one('res.users', 'Owner', help="Owner of the note stage.", required=True),
-	#FIX: think we should remove this
+    #FIX: think we should remove this
         'project_id': fields.many2one('project.project', 'Project', help="Project of the story stage.", required=False),
         'case_default': fields.boolean('Default for New Projects',
                         help="If you check this field, this stage will be proposed by default on each new project. It will not assign this stage to existing projects."),
         'project_ids': fields.many2many('project.project', 'project_scrum_backlog_stage_rel', 'stage_id', 'project_id', 'Projects'),
-	'fold': fields.boolean('Folded by Default'),
+    'fold': fields.boolean('Folded by Default'),
     }
     _order = 'sequence asc'
     _defaults = {
         'fold': 0,
         'user_id': lambda self, cr, uid, ctx: uid,
         'sequence' : 1,
-	'project_ids': _get_default_project_ids,
+    'project_ids': _get_default_project_ids,
     }
 
 
@@ -334,7 +337,7 @@ class projectScrumProductBacklog(osv.osv):
             effective = 0.0
             task_hours = 0.0
             progress = 0.0
-            
+    
             for task in backlog.tasks_id:
                 task_hours += task.total_hours
                 effective += task.effective_hours
@@ -356,11 +359,11 @@ class projectScrumProductBacklog(osv.osv):
         for backlog in self.browse(cr, uid, ids, context=context):
             obj_project_task.write(cr, uid, [i.id for i in backlog.tasks_id], {'state': 'cancelled'})
         return True
-    
+
     def button_draft(self, cr, uid, ids, context=None):
         self.write(cr, uid, ids, {'state':'draft'}, context=context)
         return True
-    
+
     def button_open(self, cr, uid, ids, context=None):
         lines = self.read(cr, uid, ids, ['sprint_id', 'acceptance_testing'])
         for line in lines:
@@ -371,55 +374,55 @@ class projectScrumProductBacklog(osv.osv):
             else:
                 self.write(cr, uid, ids, {'state':'open', 'date_open':time.strftime('%Y-%m-%d')}, context=context)
                 return True
-    
+
     def button_close(self, cr, uid, ids, context=None):
         obj_project_task = self.pool.get('project.task')
         self.write(cr, uid, ids, {'state':'done', 'active':False, 'date_done':time.strftime('%Y-%m-%d')}, context=context)
         for backlog in self.browse(cr, uid, ids, context=context):
             obj_project_task.write(cr, uid, [i.id for i in backlog.tasks_id], {'state': 'done'})
         return True
-    
+
     def button_pending(self, cr, uid, ids, context=None):
         self.write(cr, uid, ids, {'state':'pending'}, context=context)
         return True
-    
+
     _columns = {
         'role_id': fields.many2one('project.scrum.role', "As", required=True, readonly=True, states={'draft':[('readonly',False)]}),
         'name' : fields.char('I want', size=128, required=True, readonly=True, states={'draft':[('readonly',False)]}),
         'for_then' : fields.char('For', size=128, required=True, readonly=True, states={'draft':[('readonly',False)]}),
         'acceptance_testing': fields.text("Acceptance testing", readonly=True, states={'draft':[('readonly',False)]}),
-        
+
         'description': fields.text("Description"),
         'sequence' : fields.integer('Sequence', help="Gives the sequence order when displaying a list of product backlog."),
         'expected_hours': fields.float('Planned Hours', help='Estimated total time to do the Backlog'),
         'complexity': fields.integer('Complexity', help='Complexity of the User Story'),
         'active' : fields.boolean('Active', help="If Active field is set to true, it will allow you to hide the product backlog without removing it."),
         'value_to_user': fields.integer("Value to user"),
-        
+
         'state': fields.selection(BACKLOG_STATES, 'State', required=True),
         'stage_id': fields.many2one('project.scrum.pb.stage', 'Stage', track_visibility='onchange', select=True,
                         domain="[('project_ids', '=', project_id)]", copy=False),
         'open': fields.boolean('Active', track_visibility='onchange'),
         'date_open': fields.date("Date open"),
         'date_done': fields.date("Date done"),
-        
+
         'project_id': fields.many2one('project.project', "Project", required=True, readonly=True, states={'draft':[('readonly',False)]}),
         'release_id': fields.many2one('project.scrum.release', "Release", readonly=True, states={'draft':[('readonly',False)]}),
         'sprint_id': fields.many2one('project.scrum.sprint', "Sprint", readonly=True, states={'draft':[('readonly',False)]}),
-        
+
         'user_id': fields.many2one('res.users', 'Author'),
         'task_id': fields.many2one('project.task', required=False,
             string="Related Task", ondelete='restrict',
             help='Task-related data of the user story'),
         'tasks_id': fields.one2many('project.task', 'product_backlog_id', 'Tasks Details'),
-        
+
         'progress': fields.function(_compute, multi="progress", group_operator="avg", type='float', method=True, string='Progress', help="Computed as: Time Spent / Total Time."),
         'effective_hours': fields.function(_compute, multi="effective_hours", method=True, string='Spent Hours', help="Computed using the sum of the time spent on every related tasks", store=True),
         'task_hours': fields.function(_compute, multi="task_hours", method=True, string='Task Hours', help='Estimated time of the total hours of the tasks'),
-        
+
         'color': fields.integer('Color Index'),
     }
-    
+
     _defaults = {
         'state': 'draft',
         'open': 1,
@@ -428,7 +431,7 @@ class projectScrumProductBacklog(osv.osv):
         'sequence': 1000, #TODO create function to compute sequence by uniq value for all product backlog
         'value_to_user': 50,
     }
-    
+
     _order = "sequence"
 
 
@@ -441,7 +444,7 @@ class projectTaskInherit(osv.osv):
             for task in line.tasks_id:
                 result[task.id] = True
         return result.keys()
-    
+
     _columns = {
         'product_backlog_id': fields.many2one('project.scrum.product.backlog', 'Product Backlog',
                 help="Related product backlog that contains this task. Used in SCRUM methodology"),
@@ -455,7 +458,7 @@ class projectTaskInherit(osv.osv):
         #'pb_role': fields.related('product_id', 'role_id', type='many2one', string="Role", relation="project.scrum.role", readonly=True),
         #'pb_description': fields.related('product_id', 'description', type='text', string="Description", relation="project.scrum.role", readonly=True),
     }
-    
+
     def _check_dates(self, cr, uid, ids, context=None):
         for leave in self.read(cr, uid, ids, ['date_deadline'], context=context):
             if leave['date_deadline']:
@@ -475,14 +478,14 @@ class projectTaskInherit(osv.osv):
 
 class projectScrumSprintInherit(osv.osv):
     _inherit = 'project.scrum.sprint'
-    
+
     _columns = {
         'product_backlog_ids': fields.one2many('project.scrum.product.backlog', 'sprint_id', "User Stories"),
     }
 
 class projectScrumReleaseInherit(osv.osv):
     _inherit = "project.scrum.release"
-    
+
     _columns = {
         'sprint_ids': fields.one2many('project.scrum.sprint', 'release_id', "Sprints", readonly=True),
     }
