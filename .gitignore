@@ -1,0 +1,99 @@
+# Files to be ignored by Git
+# --------------------------
+
+# Temp files
+*~
+.*~
+.~*
+*.tmp
+*.temp
+*.swp
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.o
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+bin/
+build/
+develop-eggs/
+dist/
+eggs/
+#lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+
+# Translations
+*.mo
+
+# Customized config files
+*.custom
+
+# Log files
+*.log
+
+# Archives
+*.gz
+*.bz2
+*.zip
+*.tar
+
+# Dump files
+*.dump
+
+# Old and backup files
+*.old
+*.bkp
+
+# Sphinx documentation
+docs/_build/
+
+# Bzr-related
+.bzr
+.bzr/*
+.bzrignore
+
+# IDEs-related
+*.metadata
+*.settings
+*.prefs
+*.project
+*.pydevproject
+*.nja
+*.eric5project
+*.e4p
+*.e5p
+
+# Pycharm
+.idea
+
+# Mr Developer
+.mr.developer.cfg
+.project
+.pydevproject
+
+# Rope
+.ropeproject

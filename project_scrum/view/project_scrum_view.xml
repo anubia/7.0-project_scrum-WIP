@@ -363,10 +363,10 @@
             <field name="model">project.task</field>
             <field name="inherit_id" ref="project.view_task_search_form"/>
             <field name="arch" type="xml">
-                <xpath expr="//field[@name='stage_id']" position="after">
+                <xpath expr="//filter[@name='draft']" position="before">
                     <filter name="cursprint" string="Current sprints" domain="[('sprint_id.state', '=', 'open')]"/>
                 </xpath>
-                <xpath expr="//filter[@name='project']" position="after">
+                <xpath expr="//filter[@name='group_project_id']" position="after">
                     <filter string="Release" name="release" context="{'group_by':'release_id'}"/>
                     <filter string="Sprint" name="sprint" context="{'group_by':'sprint_id'}"/>
                     <filter string="Backlog" name="backlog" context="{'group_by':'product_backlog_id'}"/>
