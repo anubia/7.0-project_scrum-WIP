@@ -276,7 +276,7 @@
                             <group>
                                 <field name="project_id" class="oe_inline" domain="[('is_scrum', '=', True)]" />
                                 <field name="release_id" class="oe_inline" domain="[('project_id', '=', project_id)]"/>
-                                <field name="sprint_id" class="oe_inline" domain="[('release_id', '=', release_id)]"/>
+                                <field name="sprint_id" class="oe_inline" domain="[('release_id', '=', release_id)]" attrs="{'invisible':[('release_id', '=', False)]}"/>
                              </group>
                             <group>
                                 <field name="role_id" class="oe_inline" domain="[('project_id', '=', project_id)]"/>
