@@ -288,12 +288,24 @@ class projectScrumProductBacklog(osv.osv):
     _name = 'project.scrum.product.backlog'
     _description = "Product backlog where are user stories"
     _inherit = ['mail.thread', 'ir.needaction_mixin']
-    _track = {
-        'stage_id': {
-            # this is only an heuristics; depending on your particular stage configuration it may not match all 'new' stages
-            'project.mt_backlog_new': lambda self, cr, uid, obj, ctx=None: obj.stage_id and obj.stage_id.sequence <= 1,
-            'project.mt_backlog_stage': lambda self, cr, uid, obj, ctx=None: obj.stage_id.sequence > 1,
-        },
+
+    def _read_stage_ids(self, cr, uid, ids, domain, read_group_order=None, access_rights_uid=None, context=None):
+        stage_obj = self.pool.get('project.scrum.pb.stage')
+        order = stage_obj._order
+        if read_group_order == 'stage_id desc':
+            order = "%s desc" % order
+        search_domain = []
+        search_domain += ['|', ('id', 'in', ids), ('case_default', '=', True)]
+        stage_ids = stage_obj._search(cr, uid, search_domain, order=order, access_rights_uid=access_rights_uid, context=context)
+        result = stage_obj.name_get(cr, access_rights_uid, stage_ids, context=context)
+        result.sort(lambda x, y: cmp(stage_ids.index(x[0]), stage_ids.index(y[0])))
+        fold = {}
+        for stage in stage_obj.browse(cr, access_rights_uid, stage_ids, context=context):
+            fold[stage.id] = stage.fold or False
+        return result, fold
+
+    _group_by_full = {
+        'stage_id': _read_stage_ids
     }
 
     def _get_default_project_id(self, cr, uid, context=None):
